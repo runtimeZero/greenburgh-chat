@@ -325,8 +325,8 @@ st.markdown(
 st.markdown(
     """
     <div style='text-align: center; padding: 20px;'>
-        <h1 style='color: #004831; margin-bottom: 0;'>🏛️ The Unofficial Greenburgh Guide</h1>
-        <h3 style='color: #004831; font-weight: normal; margin-top: 10px;'>Your AI-Powered Town Information Assistant</h3>
+        <h1 style='color: #004831; margin-bottom: 0;'>🏛️ Greenburgh NY</h1>
+        <h3 style='color: #004831; font-weight: normal; margin-top: 10px;'>Your AI-Powered search Assistant</h3>
     </div>
     """,
     unsafe_allow_html=True,
@@ -337,13 +337,10 @@ if "messages" not in st.session_state:
     st.markdown(
         """
         <div style='padding: 25px; border-radius: 10px; background-color: #f8f9f9; border: 2px solid #004831;'>
-            <div style='font-size: 16px; margin-bottom: 20px;'>
-                Get instant answers about Greenburgh's services, regulations, and community information.
-            </div>
 
             Try asking questions like:
                 • What are the town's regulations for leaf blowers?
-                • How do I dispose of old paint cans?
+                • How do I dispose off old paint cans?
                 • What permits do I need to trim trees on my property?
                 • What are the rules for constructing a fence around my property?
 
