@@ -89,3 +89,38 @@ greenburgh-chat/
 ├── .env # Environment variables (not in repo)
 ├── .gitignore # Git ignore file
 └── README.md # This file
+
+## Deployment to Koyeb (Git-based)
+
+1. Fork or push this repository to GitHub
+
+2. Create a Koyeb account at https://app.koyeb.com/
+
+3. In Koyeb dashboard:
+   - Click "Create App"
+   - Choose "GitHub" as deployment method
+   - Select your repository
+   - Choose the branch to deploy (usually `main`)
+
+4. Set environment variables in Koyeb dashboard:
+   - OPENAI_API_KEY
+   - PINECONE_API_KEY
+   - PINECONE_INDEX
+   - PINECONE_NAMESPACE
+   - PINECONE_REGION
+
+5. Deploy:
+   - Click "Deploy"
+   - Wait for the build and deployment to complete
+
+The app will be available at the URL provided by Koyeb after deployment.
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `OPENAI_API_KEY` | OpenAI API key | Yes |
+| `PINECONE_API_KEY` | Pinecone API key | Yes |
+| `PINECONE_INDEX` | Pinecone index name | Yes |
+| `PINECONE_NAMESPACE` | Pinecone namespace | No |
+| `PINECONE_REGION` | Pinecone region | Yes |

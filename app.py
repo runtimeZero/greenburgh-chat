@@ -7,8 +7,52 @@ import numpy as np
 from datetime import datetime
 import time
 
-# Must be the first Streamlit command
-st.set_page_config(page_title="Greenburgh Guide", page_icon="🏛️", layout="wide")
+
+# Near the top of the file, after imports
+def is_dev_mode():
+    """Check if the app is running in development mode"""
+    return os.getenv("ENV") == "dev"
+
+
+# Update the page config
+st.set_page_config(
+    page_title="Greenburgh Guide",
+    page_icon="🏛️",
+    layout="wide",
+    initial_sidebar_state="expanded" if is_dev_mode() else "collapsed",
+)
+
+# Add custom CSS to hide elements in production
+if not is_dev_mode():
+    st.markdown(
+        """
+        <style>
+            [data-testid="collapsedControl"] {
+                display: none
+            }
+            #MainMenu {
+                visibility: hidden;
+            }
+            .stDeployButton {
+                display: none !important;
+            }
+            footer {
+                visibility: hidden;
+            }
+            /* Hide sidebar completely in production */
+            section[data-testid="stSidebar"] {
+                display: none !important;
+            }
+            /* Adjust the main content area to full width */
+            .main > div {
+                padding-left: 1rem;
+                padding-right: 1rem;
+                max-width: 64rem;
+            }
+        </style>
+    """,
+        unsafe_allow_html=True,
+    )
 
 # Load environment variables
 load_dotenv()
@@ -43,12 +87,14 @@ def optimize_index():
             },
         }
 
-        st.sidebar.write("### Index Configuration")
-        st.sidebar.write(f"Pod Type: {index_config['pod_type']}")
-        st.sidebar.write(f"Vectors: {index_description.total_vector_count}")
+        if is_dev_mode():
+            st.sidebar.write("### Index Configuration")
+            st.sidebar.write(f"Pod Type: {index_config['pod_type']}")
+            st.sidebar.write(f"Vectors: {index_description.total_vector_count}")
 
     except Exception as e:
-        st.sidebar.error(f"Error optimizing index: {str(e)}")
+        if is_dev_mode():
+            st.sidebar.error(f"Error optimizing index: {str(e)}")
 
 
 # Call this after index initialization
@@ -62,12 +108,14 @@ def check_index_stats():
     """
     try:
         stats = index.describe_index_stats()
-        st.sidebar.write("### Pinecone Index Stats")
-        st.sidebar.write(f"Total vectors: {stats.total_vector_count}")
-        st.sidebar.write(f"Namespaces: {list(stats.namespaces.keys())}")
+        if is_dev_mode():
+            st.sidebar.write("### Pinecone Index Stats")
+            st.sidebar.write(f"Total vectors: {stats.total_vector_count}")
+            st.sidebar.write(f"Namespaces: {list(stats.namespaces.keys())}")
         return stats.total_vector_count > 0
     except Exception as e:
-        st.sidebar.error(f"Error checking index stats: {str(e)}")
+        if is_dev_mode():
+            st.sidebar.error(f"Error checking index stats: {str(e)}")
         return False
 
 
@@ -76,11 +124,6 @@ if not check_index_stats():
     st.warning(
         "⚠️ The Pinecone index appears to be empty. Please add some data before querying."
     )
-
-
-# Add test data button in sidebar
-if st.sidebar.button("Add Test Data"):
-    add_test_data()
 
 
 @st.cache_data(ttl=3600)  # Cache for 1 hour
@@ -106,7 +149,7 @@ def get_context_from_pinecone(query):
     results = index.query(
         vector=query_vector,
         namespace=os.getenv("PINECONE_NAMESPACE"),
-        top_k=5,
+        top_k=3,
         include_metadata=True,
         include_values=False,  # Don't return vector values to reduce payload
         sparse_vector=None,  # Optional: Add sparse vector for hybrid search
@@ -241,33 +284,73 @@ def add_test_data():
     st.success(f"Successfully added {len(vectors)} vectors to Pinecone")
 
 
-# Where the old set_page_config was, keep only the markdown styling
+# Update the markdown styling with Greenburgh's colors
 st.markdown(
     """
-    <h1 style='text-align: center; color: #2E4053;'>🏛️ Your Greenburgh Guide</h1>
-    <h3 style='text-align: center; color: #566573;'>Your AI-powered assistant for all things Greenburgh</h3>
+    <style>
+        /* Greenburgh theme colors */
+        :root {
+            --greenburgh-green: #004831;
+            --greenburgh-light: #ffffff;
+            --greenburgh-accent: #b8860b;
+        }
+        
+        /* Header styling */
+        h1, h2, h3 {
+            color: var(--greenburgh-green) !important;
+        }
+        
+        /* Chat container styling */
+        .stChatMessage {
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        /* Input box styling */
+        .stTextInput > div > div > input {
+            border-color: var(--greenburgh-green);
+        }
+        
+        /* Button styling */
+        .stButton > button {
+            background-color: var(--greenburgh-green);
+            color: white;
+        }
+    </style>
+""",
+    unsafe_allow_html=True,
+)
+
+# Update the welcome header with simpler HTML
+st.markdown(
+    """
+    <div style='text-align: center; padding: 20px;'>
+        <h1 style='color: #004831; margin-bottom: 0;'>🏛️ The Unofficial Greenburgh Guide</h1>
+        <h3 style='color: #004831; font-weight: normal; margin-top: 10px;'>Your AI-Powered Town Information Assistant</h3>
+    </div>
     """,
     unsafe_allow_html=True,
 )
 
-# Add a welcoming message
+# Add a new welcome message with sample questions
 if "messages" not in st.session_state:
     st.markdown(
         """
-    <div style='padding: 20px; border-radius: 10px; background-color: #F8F9F9;'>
-        👋 <b>Welcome to Your Greenburgh Guide!</b>
-        <br><br>
-        I'm here to help you with:
-        <br>
-        • Town regulations and policies 📋
-        <br>
-        • Local services and facilities 🏢
-        <br>
-        • Community information 🏘️
-        <br><br>
-        How can I assist you today?
-    </div>
-    """,
+        <div style='padding: 25px; border-radius: 10px; background-color: #f8f9f9; border: 2px solid #004831;'>
+            <div style='font-size: 16px; margin-bottom: 20px;'>
+                Get instant answers about Greenburgh's services, regulations, and community information.
+            </div>
+
+            Try asking questions like:
+                • What are the town's regulations for leaf blowers?
+                • How do I dispose of old paint cans?
+                • What permits do I need to trim trees on my property?
+                • What are the rules for constructing a fence around my property?
+
+        Note: This is an unofficial AI assistant powered by public Greenburgh information. 
+        For official matters, please visit <a href='https://www.greenburghny.com' target='_blank' style='color: #004831;'>www.greenburghny.com</a>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
     st.session_state.messages = []
@@ -294,12 +377,15 @@ def monitor_performance():
     """
     Monitor and display performance metrics
     """
-    # Display metrics in sidebar
-    st.sidebar.write("### Performance Metrics")
-    if st.session_state.query_times:
-        avg_time = sum(st.session_state.query_times) / len(st.session_state.query_times)
-        st.sidebar.write(f"Avg Query Time: {avg_time:.2f}s")
-    st.sidebar.write(f"Total Queries: {st.session_state.total_queries}")
+    if is_dev_mode():
+        # Display metrics in sidebar
+        st.sidebar.write("### Performance Metrics")
+        if st.session_state.query_times:
+            avg_time = sum(st.session_state.query_times) / len(
+                st.session_state.query_times
+            )
+            st.sidebar.write(f"Avg Query Time: {avg_time:.2f}s")
+        st.sidebar.write(f"Total Queries: {st.session_state.total_queries}")
 
 
 # Then keep the chat input section
