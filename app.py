@@ -6,6 +6,7 @@ import os
 import numpy as np
 from datetime import datetime
 import time
+import streamlit.components.v1 as components
 
 
 # Near the top of the file, after imports
@@ -16,7 +17,7 @@ def is_dev_mode():
 
 # Update the page config
 st.set_page_config(
-    page_title="Greenburgh Guide",
+    page_title="Greenburgh Genie",
     page_icon="🏛️",
     layout="wide",
     initial_sidebar_state="expanded" if is_dev_mode() else "collapsed",
@@ -39,14 +40,15 @@ if not is_dev_mode():
             footer {
                 visibility: hidden;
             }
-            /* Hide sidebar completely in production */
+            /* Show sidebar in production for disclaimer */
             section[data-testid="stSidebar"] {
-                display: none !important;
+                width: 300px !important;
+                background-color: #f8f9f9;
             }
-            /* Adjust the main content area to full width */
+            /* Adjust the main content area */
             .main > div {
-                padding-left: 1rem;
-                padding-right: 1rem;
+                padding-left: 2rem;
+                padding-right: 2rem;
                 max-width: 64rem;
             }
         </style>
@@ -185,6 +187,7 @@ def get_chatgpt_response(messages, context=""):
         3. If applicable, mention specific rules or regulations
         4. If there are exceptions or special conditions, clearly state them
         5. Use bullet points or numbered lists when appropriate to improve readability
+        6. Provide links to relevant sections of the Greenburgh website when possible
 
         Only use information from the following context. If you cannot answer completely based on the context, acknowledge what you can answer and what information is missing.
 
@@ -321,35 +324,38 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Update the welcome header with simpler HTML
+# Update the welcome header with new branding
 st.markdown(
     """
     <div style='text-align: center; padding: 20px;'>
-        <h1 style='color: #004831; margin-bottom: 0;'>🏛️ Greenburgh NY</h1>
-        <h3 style='color: #004831; font-weight: normal; margin-top: 10px;'>Your AI-Powered search Assistant</h3>
+        <h1 style='color: #004831; margin-bottom: 0;'>🧞‍♂️ Welcome to Greenburgh Genie</h1>
+        <h3 style='color: #004831; font-weight: normal; margin-top: 10px;'>Your AI-Powered Search Assistant</h3>
     </div>
     """,
     unsafe_allow_html=True,
 )
 
-# Add a new welcome message with sample questions
+# Update the welcome message with new content
 if "messages" not in st.session_state:
+    # Welcome text
     st.markdown(
         """
         <div style='padding: 25px; border-radius: 10px; background-color: #f8f9f9; border: 2px solid #004831;'>
-
-            Try asking questions like:
-                • What are the town's regulations for leaf blowers?
-                • How do I dispose off old paint cans?
-                • What permits do I need to trim trees on my property?
-                • What are the rules for constructing a fence around my property?
-
-        Note: This is an unofficial AI assistant powered by public Greenburgh information. 
-        For official matters, please visit <a href='https://www.greenburghny.com' target='_blank' style='color: #004831;'>www.greenburghny.com</a>
+            <p style='font-size: 16px; margin-bottom: 20px;'>
+                Just type your question, and I'll fetch the answers from www.greenburghny.com for you—fast, easy, and hassle-free!
+            </p>
+            Try Asking:
+            <ul>
+                <li>Town regulations for leaf blowers</li>
+                <li>How to dispose of old paint cans</li>
+                <li>Permits needed for tree trimming</li>
+                <li>Rules for constructing a fence</li>
+            </ul>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
     st.session_state.messages = []
 
 # Initialize chat history and performance metrics
@@ -425,3 +431,16 @@ if prompt := st.chat_input("What would you like to know?"):
     st.session_state.query_times.append(query_time)
     st.session_state.total_queries += 1
     monitor_performance()
+
+# Update the disclaimer in sidebar with more accurate description
+st.sidebar.markdown(
+    """
+    ### About Greenburgh Genie
+    <div style='font-size: 14px; color: #666; margin-top: 10px;'>
+        This is an experimental hobby project and is not affiliated with the official Greenburgh government website. 
+        While we strive to provide accurate information, always verify with 
+        <a href='https://www.greenburghny.com' target='_blank' style='color: #004831;'>official sources</a> when needed.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
