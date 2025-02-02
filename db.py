@@ -13,19 +13,20 @@ def get_mongo_client():
     return MongoClient(mongo_uri)
 
 
-def log_query(query, context_found=True, response=None):
+def log_query(query, context_found=True, client_ip=None):
     """Log user query to MongoDB"""
     try:
         client = get_mongo_client()
         db = client.greenburgh
         collection = db.queries
 
-        # Create document with environment info
+        # Create document with environment info and IP
         doc = {
             "query": query,
             "timestamp": datetime.utcnow(),
             "context_found": context_found,
             "environment": os.getenv("ENV", "dev"),
+            "ip_address": client_ip,  # Add IP address field
         }
 
         # Insert document and return its ID

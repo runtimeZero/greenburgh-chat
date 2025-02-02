@@ -248,51 +248,6 @@ def cosine_similarity(v1, v2):
     return dot_product / (norm_v1 * norm_v2)
 
 
-def add_test_data():
-    """
-    Add test data to Pinecone with batch processing
-    """
-    BATCH_SIZE = 100  # Process vectors in batches
-
-    test_data = [
-        """In Greenburgh, leaf blowers are strictly regulated under the Town's Noise Ordinance. Gas-powered blowers are prohibited from operating above 55 decibels, which is the town's established noise limit.""",
-        """The Town's regulations on blowers cover three main areas: 1) Noise pollution - both gas and electric blowers must meet decibel limits, 2) Environmental impact - concerns about air-borne particulates and soil damage, 3) Health considerations - protecting residents from involuntary exposure to harmful particles.""",
-        """Residents have special considerations under the local law. While using electric blowers, residents have certain exemptions, but must still comply with basic noise and usage restrictions. These exemptions were added to make the law more acceptable to homeowners.""",
-        """Modern electric blowers, despite being marketed as environmentally friendly, can produce Hurricane-force winds and high decibel levels. Almost all blowers, both gas and electric, operate at decibel levels above EPA comfort standards. Out of 300 studied blowers, only 5 electric models met the Town's noise requirements.""",
-        """The Town's comprehensive approach to blower regulation addresses: a) involuntary exposure of residents to harmful air-borne particulates, b) noise pollution affecting quality of life, and c) prevention of soil damage in the community.""",
-        """Enforcement of blower regulations in Greenburgh focuses on both commercial operators and residential users. The regulations apply year-round but may have seasonal variations in restrictions.""",
-        "The Town of Greenburgh is located in Westchester County, New York, and was founded in 1788.",
-        "Greenburgh encompasses several villages including Ardsley, Dobbs Ferry, and Irvington, each subject to town-wide regulations.",
-    ]
-
-    # Get embeddings for all texts at once
-    response = client.embeddings.create(
-        model="text-embedding-3-small", input=test_data, encoding_format="float"
-    )
-
-    # Prepare vectors in batches
-    vectors = []
-    for i, embedding in enumerate(response.data):
-        vectors.append(
-            {
-                "id": f"test-{i}",
-                "values": embedding.embedding,
-                "metadata": {
-                    "text": test_data[i],
-                    "timestamp": str(datetime.now()),  # Add timestamp for versioning
-                    "source": "test_data",
-                },
-            }
-        )
-
-    # Upsert vectors in batches
-    for i in range(0, len(vectors), BATCH_SIZE):
-        batch = vectors[i : i + BATCH_SIZE]
-        index.upsert(vectors=batch)
-
-    st.success(f"Successfully added {len(vectors)} vectors to Pinecone")
-
-
 # Update the markdown styling with Greenburgh's colors
 st.markdown(
     """
@@ -352,10 +307,11 @@ if "messages" not in st.session_state:
             </p>
             Try Asking:
             <ul>
-                <li>Town regulations for leaf blowers</li>
-                <li>How to dispose of old paint cans</li>
-                <li>Permits needed for tree trimming</li>
-                <li>Rules for constructing a fence</li>
+                <li>What are Greenburgh's regulations for usage of gas leaf blowers?</li>
+                <li>How do I dispose off old paint cans?</li>
+                <li>Do I need permits to trim trees on my property?</li>
+                <li>What are the town's regulations for constructing a fence?</li>
+                <li>What are electricity rates in Greenburgh?</li>
             </ul>
         </div>
         """,
@@ -397,6 +353,28 @@ def monitor_performance():
         st.sidebar.write(f"Total Queries: {st.session_state.total_queries}")
 
 
+# Update the get_client_ip function
+def get_client_ip():
+    """Get client IP address from Streamlit"""
+    try:
+        # Get the request headers from Streamlit's runtime
+        headers = st.runtime.get_instance()._session.ws.request.headers
+
+        # Try to get IP from X-Forwarded-For header first (for proxied requests)
+        forwarded_for = headers.get("X-Forwarded-For")
+        if forwarded_for:
+            return forwarded_for.split(",")[0].strip()
+
+        # Fallback to direct remote address
+        remote_addr = headers.get("Remote-Addr")
+        if remote_addr:
+            return remote_addr
+
+        return "Unknown"
+    except:
+        return "Unknown"
+
+
 # Then keep the chat input section
 if prompt := st.chat_input("What would you like to know?"):
     start_time = time.time()
@@ -419,14 +397,14 @@ if prompt := st.chat_input("What would you like to know?"):
 
         if validation_message:
             # Log query with context_found=False
-            query_id = log_query(prompt, context_found=False)
+            query_id = log_query(prompt, context_found=False, client_ip=get_client_ip())
             st.write(validation_message)
             st.session_state.messages.append(
                 {"role": "assistant", "content": validation_message}
             )
         else:
             # Log query with context_found=True
-            query_id = log_query(prompt, context_found=True)
+            query_id = log_query(prompt, context_found=True, client_ip=get_client_ip())
 
             # Continue with normal flow
             stream = get_chatgpt_response(
