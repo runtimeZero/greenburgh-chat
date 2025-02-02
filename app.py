@@ -302,11 +302,11 @@ if "messages" not in st.session_state:
     st.markdown(
         """
         <div style='padding: 25px; border-radius: 10px; background-color: #f8f9f9; border: 2px solid #004831;'>
-            <p style='font-size: 16px; margin-bottom: 20px;'>
+            <p style='font-size: 16px; margin-bottom: 20px; '>
                 Just type your question, and I'll fetch the answers from www.greenburghny.com for you—fast, easy, and hassle-free!
             </p>
             Try Asking:
-            <ul>
+            <ul style='font-size: 14px; font-weight: light; font-style: italic;'>
                 <li>What are Greenburgh's regulations for usage of gas leaf blowers?</li>
                 <li>How do I dispose off old paint cans?</li>
                 <li>Do I need permits to trim trees on my property?</li>
@@ -423,14 +423,20 @@ if prompt := st.chat_input("What would you like to know?"):
     monitor_performance()
 
 
-# Update the disclaimer in sidebar with more accurate description
+# Update the disclaimer in sidebar with more accurate description and feedback link
 st.sidebar.markdown(
     """
     ### About Greenburgh Genie
-    <div style='font-size: 14px; color: #666; margin-top: 10px;'>
+    <div style='font-size: 14px; color: #666; margin-bottom: 20px;'>
         This is an experimental hobby project and is not affiliated with the official Greenburgh government website. 
         While we strive to provide accurate information, always verify with 
         <a href='https://www.greenburghny.com' target='_blank' style='color: #004831;'>official sources</a> when needed.
+    </div>
+    
+    ### Feedback & Support
+    <div style='font-size: 14px; color: #666;'>
+        Have feedback or concerns? Email us at:
+        <a href='mailto:greenburgh_genie@proton.me' style='color: #004831;'>greenburgh_genie@proton.me</a>
     </div>
     """,
     unsafe_allow_html=True,
