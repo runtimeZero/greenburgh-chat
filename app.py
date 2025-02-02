@@ -7,6 +7,9 @@ import numpy as np
 from datetime import datetime
 import time
 import streamlit.components.v1 as components
+from add_ga import inject_ga
+from db import log_query
+from bson import ObjectId
 
 
 # Near the top of the file, after imports
@@ -151,7 +154,7 @@ def get_context_from_pinecone(query):
     results = index.query(
         vector=query_vector,
         namespace=os.getenv("PINECONE_NAMESPACE"),
-        top_k=3,
+        top_k=15,
         include_metadata=True,
         include_values=False,  # Don't return vector values to reduce payload
         sparse_vector=None,  # Optional: Add sparse vector for hybrid search
@@ -179,10 +182,10 @@ def get_chatgpt_response(messages, context=""):
     # Create a more detailed system message
     system_message = {
         "role": "system",
-        "content": """You are a knowledgeable assistant for the Town of Greenburgh. Your role is to provide detailed, well-structured answers using the provided context.
+        "content": """You are a knowledge assistant for the Town of Greenburgh. Your role is to provide detailed, well-structured answers using the provided context.
 
         When answering:
-        1. Start with a clear, direct response to the question
+        1. Use most recent information and friendly language when responding  
         2. Provide relevant details and explanations
         3. If applicable, mention specific rules or regulations
         4. If there are exceptions or special conditions, clearly state them
@@ -192,7 +195,11 @@ def get_chatgpt_response(messages, context=""):
         Only use information from the following context. If you cannot answer completely based on the context, acknowledge what you can answer and what information is missing.
 
         Context: {context}""".format(
-            context=context if context else "No context available."
+            context=(
+                context
+                if context
+                else "Could not locate information. Please check the official website."
+            )
         ),
     }
 
@@ -203,7 +210,7 @@ def get_chatgpt_response(messages, context=""):
         model="gpt-4-turbo-preview",
         messages=messages,
         stream=True,
-        temperature=0.3,  # Slightly increased for more natural responses while maintaining accuracy
+        temperature=0.7,  # Increased for more natural responses
     )
     return stream
 
@@ -213,7 +220,7 @@ def validate_context_relevance(query, context):
     Validate if the context is relevant to the query
     """
     if not context:
-        return "Sorry, no relevant information found."
+        return "Sorry, I was unable to locate that information. You might want to check the official Greenburgh website for the most up-to-date details."
 
     # Get similarity score between query and context
     response = client.embeddings.create(
@@ -225,9 +232,8 @@ def validate_context_relevance(query, context):
 
     similarity = cosine_similarity(query_embedding, context_embedding)
 
-    # Lower this threshold as well
-    if similarity < 0.5:  # Changed from 0.7
-        return "I found some information, but it may not be directly relevant to your query."
+    if similarity < 0.5:
+        return "Sorry, I was unable to locate that specific information. Would you like to try rephrasing your question?"
 
     return None
 
@@ -402,20 +408,27 @@ if prompt := st.chat_input("What would you like to know?"):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Get relevant context from Pinecone
-    context = get_context_from_pinecone(prompt)
+    # Show a friendly loading message
+    with st.chat_message("assistant"):
+        with st.spinner("🔍 Searching for relevant information..."):
+            # Get relevant context from Pinecone
+            context = get_context_from_pinecone(prompt)
 
-    # Validate context relevance
-    validation_message = validate_context_relevance(prompt, context)
-    if validation_message:
-        with st.chat_message("assistant"):
+            # Validate context relevance
+            validation_message = validate_context_relevance(prompt, context)
+
+        if validation_message:
+            # Log query with context_found=False
+            query_id = log_query(prompt, context_found=False)
             st.write(validation_message)
-        st.session_state.messages.append(
-            {"role": "assistant", "content": validation_message}
-        )
-    else:
-        # Continue with normal flow
-        with st.chat_message("assistant"):
+            st.session_state.messages.append(
+                {"role": "assistant", "content": validation_message}
+            )
+        else:
+            # Log query with context_found=True
+            query_id = log_query(prompt, context_found=True)
+
+            # Continue with normal flow
             stream = get_chatgpt_response(
                 [
                     {"role": m["role"], "content": m["content"]}
@@ -424,13 +437,13 @@ if prompt := st.chat_input("What would you like to know?"):
                 context,
             )
             response = st.write_stream(stream)
-
-        st.session_state.messages.append({"role": "assistant", "content": response})
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
     query_time = time.time() - start_time
     st.session_state.query_times.append(query_time)
     st.session_state.total_queries += 1
     monitor_performance()
+
 
 # Update the disclaimer in sidebar with more accurate description
 st.sidebar.markdown(
@@ -444,3 +457,61 @@ st.sidebar.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# Keep the injection call at the start of the app
+inject_ga()
+
+
+def find_and_delete_vectors(search_text):
+    """
+    Find and delete vectors containing specific text (dev mode only)
+    """
+    if not is_dev_mode():
+        return "This function is only available in development mode"
+
+    # Get the embedding for the search text
+    search_vector = get_embedding(search_text)
+
+    # Search for similar vectors
+    results = index.query(
+        vector=search_vector,
+        namespace=os.getenv("PINECONE_NAMESPACE"),
+        top_k=5,
+        include_metadata=True,
+    )
+
+    # Return the matches for review
+    return results.matches
+
+
+def delete_vector(vector_id):
+    """Delete a specific vector by ID"""
+    if not is_dev_mode():
+        return
+
+    index.delete(ids=[vector_id], namespace=os.getenv("PINECONE_NAMESPACE"))
+
+
+# Add this after the monitor_performance section
+if is_dev_mode():
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### Database Management")
+
+    search_text = st.sidebar.text_input(
+        "Search for content to remove:", placeholder="Enter text to find in database"
+    )
+
+    if search_text:
+        matches = find_and_delete_vectors(search_text)
+        if matches:
+            st.sidebar.markdown("#### Found Entries:")
+            for match in matches:
+                with st.sidebar.expander(f"Score: {match.score:.2f}", expanded=True):
+                    st.write(match.metadata.get("text", "No text found"))
+                    if st.button("Delete this entry", key=match.id):
+                        delete_vector(match.id)
+                        st.success(
+                            "Entry deleted! Refresh the page to see updated results."
+                        )
+        else:
+            st.sidebar.info("No matching entries found")

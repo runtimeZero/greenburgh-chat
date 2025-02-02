@@ -6,16 +6,6 @@ service:
     - port: 8501
       protocol: http
   env:
-    - name: OPENAI_API_KEY
-      value: ${{ secrets.OPENAI_API_KEY }}
-    - name: PINECONE_API_KEY
-      value: ${{ secrets.PINECONE_API_KEY }}
-    - name: PINECONE_INDEX
-      value: "greenburgh"
-    - name: PINECONE_NAMESPACE
-      value: "prod"
-    - name: PINECONE_REGION
-      value: "us-east-1"
     - name: PORT
       value: "8501"
   routes:
