@@ -182,23 +182,25 @@ def get_chatgpt_response(messages, context=""):
     # Create a more detailed system message
     system_message = {
         "role": "system",
-        "content": """You are a knowledge assistant for the Town of Greenburgh. Your role is to provide detailed, well-structured answers using the provided context.
+        "content": """You are a knowledge assistant for the Town of Greenburgh. Your role is to provide detailed, well-structured answers using the provided content fetched from www.greenburghny.com.
 
         When answering:
-        1. Use most recent information and friendly language when responding  
-        2. Provide relevant details and explanations
-        3. If applicable, mention specific rules or regulations
-        4. If there are exceptions or special conditions, clearly state them
-        5. Use bullet points or numbered lists when appropriate to improve readability
-        6. Provide links to relevant sections of the Greenburgh website when possible
+        Provide relevant details and explanations
+        If applicable, mention specific rules or regulations
+        If there are exceptions or special conditions, clearly state them
+        Use bullet points or numbered lists when appropriate to improve readability
 
-        Only use information from the following context. If you cannot answer completely based on the context, acknowledge what you can answer and what information is missing.
+        If the content is sufficient to provide a meaningful answer, begin your response with:
+        “After reviewing hundreds of pages and documents on the Greenburgh website, I’ve gathered the following information that may help answer your question.”
+               
+       	If the content is not sufficient to provide a meaningful answer, begin with:
+       “Unfortunately, after reviewing hundreds of pages on greenburghny.com, I couldn’t find specific information related to your question. I recommend searching the official website directly.”
 
         Context: {context}""".format(
             context=(
                 context
                 if context
-                else "Could not locate information. Please check the official website."
+                else "Searched over 700 pages and documents on the Greenburgh website. Could not locate information. Please check the official website for more details."
             )
         ),
     }
@@ -233,7 +235,7 @@ def validate_context_relevance(query, context):
     similarity = cosine_similarity(query_embedding, context_embedding)
 
     if similarity < 0.5:
-        return "Sorry, I was unable to locate that specific information. Would you like to try rephrasing your question?"
+        return "Sorry, I scanned over 700 pages and documents on the Greenburgh website but was unable to locate that specific information. You could try rephrasing your question or searching directly on www.greenburghny.com?"
 
     return None
 
@@ -307,11 +309,15 @@ if "messages" not in st.session_state:
             </p>
             Try Asking:
             <ul style='font-size: 14px; font-weight: light; font-style: italic;'>
+                <li>What tax exemptions can I claim as a senior citizen in greenburgh?</li>
                 <li>What are Greenburgh's regulations for usage of gas leaf blowers?</li>
                 <li>How do I dispose off old paint cans?</li>
                 <li>Do I need permits to trim trees on my property?</li>
                 <li>What are the town's regulations for constructing a fence?</li>
                 <li>What are electricity rates in Greenburgh?</li>
+                <li>What are the rules for parking on residential streets in Greenburgh?</li>
+                <li>How do I get a building permit?</li>
+                <li>What are the rules for disposing of hazardous materials?</li>
             </ul>
         </div>
         """,
